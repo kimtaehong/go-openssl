@@ -333,3 +333,41 @@ func (ctx *decryptionCipherCtx) DecryptFinal() ([]byte, error) {
 	}
 	return outbuf[:outlen], nil
 }
+
+func EvpBytesToKey(blocksize int, digest EVP_MD, salt string, data string, count int) ([]byte, []byte) {
+	var cipherptr *C.EVP_CIPHER
+
+	switch blocksize {
+	case 256:
+		cipherptr = C.EVP_aes_256_gcm()
+	case 192:
+		cipherptr = C.EVP_aes_192_gcm()
+	case 128:
+		cipherptr = C.EVP_aes_128_gcm()
+	default:
+		return nil, nil
+	}
+
+	var sptr *C.uchar
+	if len(salt) > 0 {
+		sptr = (*C.uchar)(&[]byte(salt)[0])
+	} else {
+		sptr = (*C.uchar)(nil)
+	}
+	kptr := (*C.uchar)(&[]byte(data)[0])
+
+	key := make([]byte, 64)
+	keyPtr := (*C.uchar)(&key[0])
+	iv := make([]byte, 32)
+	ivPtr := (*C.uchar)(&iv[0])
+	C.EVP_BytesToKey(
+		cipherptr,
+		getDigestFunction(digest),
+		sptr,
+		kptr,
+		C.int(len(key)),
+		C.int(count),
+		keyPtr,
+		ivPtr)
+	return key, iv
+}

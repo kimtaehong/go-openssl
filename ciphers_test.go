@@ -300,3 +300,8 @@ func TestNonAuthenticatedEncryption(t *testing.T) {
 
 	checkEqual(t, []byte(plainOutput), plaintext1+plaintext2)
 }
+
+func TestEVPBytesToKey(t *testing.T) {
+	key, iv := EvpBytesToKey(256, EVP_SHA1, "", "ZwQueryInformationProcess", 5)
+	fmt.Printf("%s, %s", string(key), string(iv))
+}
