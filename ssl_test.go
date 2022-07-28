@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kimtaehong/go-openssl/utils"
+	"github.com/somma-inc/monster-unix/pkg/go-openssl/utils"
 )
 
 var (

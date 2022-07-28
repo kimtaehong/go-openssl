@@ -100,21 +100,21 @@ func NewGCMDecryptionCipherCtx(blocksize int, e *Engine, key, iv []byte) (
 	if err != nil {
 		return nil, err
 	}
-	ctx, err := newDecryptionCipherCtx(cipher, e, key, nil)
+	ctx, err := newDecryptionCipherCtx(cipher, e, key, iv)
 	if err != nil {
 		return nil, err
 	}
-	if len(iv) > 0 {
-		err := ctx.setCtrl(C.EVP_CTRL_GCM_SET_IVLEN, len(iv))
-		if err != nil {
-			return nil, fmt.Errorf("could not set IV len to %d: %s",
-				len(iv), err)
-		}
-		if C.EVP_DecryptInit_ex(ctx.ctx, nil, nil, nil,
-			(*C.uchar)(&iv[0])) != 1 {
-			return nil, errors.New("failed to apply IV")
-		}
-	}
+	//if len(iv) > 0 {
+	//	err := ctx.setCtrl(C.EVP_CTRL_GCM_SET_IVLEN, len(iv))
+	//	if err != nil {
+	//		return nil, fmt.Errorf("could not set IV len to %d: %s",
+	//			len(iv), err)
+	//	}
+	//	if C.EVP_DecryptInit_ex(ctx.ctx, nil, nil, nil,
+	//		(*C.uchar)(&iv[0])) != 1 {
+	//		return nil, errors.New("failed to apply IV")
+	//	}
+	//}
 	return &authDecryptionCipherCtx{decryptionCipherCtx: ctx}, nil
 }
 

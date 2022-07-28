@@ -1,4 +1,4 @@
-module github.com/kimtaehong/go-openssl
+module github.com/somma-inc/monster-unix/pkg/go-openssl
 
 require (
 	github.com/mattn/go-pointer v0.0.1
