@@ -105,17 +105,9 @@ func NewCipherCtx() (*cipherCtx, error) {
 func (ctx *cipherCtx) applyKeyAndIV(key, iv []byte) error {
 	var kptr, iptr *C.uchar
 	if key != nil {
-		//if len(key) != ctx.KeySize() {
-		//	return fmt.Errorf("bad key size (%d bytes instead of %d)",
-		//		len(key), ctx.KeySize())
-		//}
 		kptr = (*C.uchar)(&key[0])
 	}
 	if iv != nil {
-		//if len(iv) != ctx.IVSize() {
-		//	return fmt.Errorf("bad IV size (%d bytes instead of %d)",
-		//		len(iv), ctx.IVSize())
-		//}
 		iptr = (*C.uchar)(&iv[0])
 	}
 	if kptr != nil || iptr != nil {
@@ -212,7 +204,7 @@ type EncryptionCipherCtx interface {
 
 type DecryptionCipherCtx interface {
 	CipherCtx
-	Decrypt(input []byte) ([]byte, error)
+	Decrypt(input []byte) ([]byte, int, error)
 	// pass in ciphertext, get back plaintext. can be called
 	// multiple times as needed
 	DecryptUpdate(input []byte) ([]byte, error)
@@ -300,24 +292,26 @@ func (ctx *encryptionCipherCtx) EncryptUpdate(input []byte) ([]byte, error) {
 	return outbuf[:outlen], nil
 }
 
-func (ctx *decryptionCipherCtx) Decrypt(input []byte) ([]byte, error) {
+func (ctx *decryptionCipherCtx) Decrypt(input []byte) ([]byte, int, error) {
 	if len(input) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
-	outBuffer := make([]byte, len(input)+1)
+	outBuffer := make([]byte, len(input))
 	outLength := C.int(len(input))
-	res := C.EVP_DecryptUpdate(
+	C.EVP_DecryptUpdate(
 		ctx.ctx,
 		(*C.uchar)(&outBuffer[0]),
 		&outLength,
 		(*C.uchar)(&input[0]),
 		C.int(len(input)))
-	if res != 1 {
-		return nil, fmt.Errorf("failed to decrypt [result %d]", res)
-	}
 
-	// C.EVP_DecryptFinal_ex(ctx.ctx, (*C.uchar)(&outBuffer[outLength]), nil)
-	return outBuffer, nil
+	outFinalLength := C.int(0)
+	C.EVP_DecryptFinal_ex(
+		ctx.ctx,
+		(*C.uchar)(&outBuffer[len(input)-1]),
+		&outFinalLength)
+
+	return outBuffer, int(outLength + outFinalLength), nil
 }
 
 func (ctx *decryptionCipherCtx) DecryptUpdate(input []byte) ([]byte, error) {
@@ -356,33 +350,4 @@ func (ctx *decryptionCipherCtx) DecryptFinal() ([]byte, error) {
 		return nil, errors.New("decryption failed")
 	}
 	return outbuf[:outlen], nil
-}
-
-func EvpBytesToKey(blocksize int, digest EVP_MD, salt string, data string, count int) (int, []byte, []byte) {
-	cipher, err := getGCMCipher(blocksize)
-	if err != nil {
-		return 0, nil, nil
-	}
-	var sptr *C.uchar
-	if len(salt) > 0 {
-		sptr = (*C.uchar)(&[]byte(salt)[0])
-	} else {
-		sptr = (*C.uchar)(nil)
-	}
-	kptr := (*C.uchar)(&[]byte(data)[0])
-
-	key := make([]byte, 64)
-	keyPtr := (*C.uchar)(&key[0])
-	iv := make([]byte, 16)
-	ivPtr := (*C.uchar)(&iv[0])
-	ret := C.EVP_BytesToKey(
-		cipher.ptr,
-		getDigestFunction(digest),
-		sptr,
-		kptr,
-		C.int(len(data)),
-		C.int(count),
-		keyPtr,
-		ivPtr)
-	return int(ret), key, iv
 }
